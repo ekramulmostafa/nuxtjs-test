@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title : Player </title>
+
+    <link href="css/video-js.css" rel="stylesheet"/>
+    <link href="css/videojs-http-source-selector.css" rel="stylesheet"/>
+    <link href="css/videojs-chromecast.css" rel="stylesheet"/>
+    <link href="css/videojs.ads.css" rel="stylesheet"/>
+    <link href="css/videojs.ima.css" rel="stylesheet"/>
+
+
+    <link href="css/custom.css" rel="stylesheet"/>
+    <script
+            src="https://code.jquery.com/jquery-3.3.1.slim.js"
+            integrity="sha256-fNXJFIlca05BIO2Y5zh1xrShK3ME+/lYZ0j+ChxX2DA="
+            crossorigin="anonymous"></script>
+    <script src="https://imasdk.googleapis.com/js/sdkloader/ima3.js"></script>
+    <script src="videojs/video.min.js"></script>
+    <script src="videojs/videojs-ie8.min.js"></script>
+    <script src="videojs/videojs-http-streaming.min.js"></script>
+    <script src="videojs/videojs-contrib-quality-levels.min.js"></script>
+    <script src="videojs/videojs-http-source-selector.min.js"></script>
+
+
+    <script src="videojs/videojs.ads.min.js"></script>
+    <script src="videojs/videojs.ima.js"></script>
+
+    <script src="videojs/videojs-remember.js"></script>
+    <script src="videojs/videojs-sendcustomerfeedback.min.js?v=1.0"></script>
+    <script src="videojs/silvermine-videojs-chromecast.js"></script>
+    <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+
+
+</head>
+<script>
+    $( document ).ready(function() {
+        console.log( "ready!" );
+
+        var options;
+        options = {
+            html5: {
+                hls: {
+
+                    nativeAudioTracks: false,
+                    nativeVideoTracks: false,
+                }
+            },
+
+            techOrder: [ 'chromecast', 'html5' ],
+            chromecast: {
+                requestTitleFn: function(source) {
+                    return "something";
+                },
+                requestCustomDataFn : function () {
+                    return {
+                        'live':true,
+                        'channel': '{{ channel.symbol }}',
+                        'server': '{{ channel.server }}'
+                    }
+                },
+                requestPosterfn: function(){
+                    return [
+                        {
+                            'url':'{{ cdn_url }}/channels/landscape/{{ channel.bongoId }}.png'
+                        }
+                    ];
+                }
+            },
+            plugins: {
+                chromecast: {
+                    receiverAppID: '{{ chromecast_app_id }}' //BCE69201
+                },
+                remember: {"localStorageKey": "bioscope.remember." + "{{channel.bongoId }}"},
+                sendcustomerfeedback : {
+                    title: "What's happening? ",
+                    description: "Please check all those that apply",
+                    url: "{{ path('bongo_web_video_get_customer_feedback') }}",
+                    userIp: '{{ ip }}',
+                    feedbackOptions: [{
+                        optionType: 'checkbox', // can be radio too, if needed.
+                        text: 'Streaming problems',
+                        subtext: 'wrong title or summery or episode out of order',
+                    }, {
+                        optionType: 'checkbox', // can be radio too, if needed.
+                        text: 'Video Problems',
+                        subtext: 'blurry, cut out or looks strange',
+                    }]
+                }
+
+            },
+            controls: true,
+            autoplay: true
+        };
+
+        player = videojs('content_video', options);
+
+        player.src({
+            src: 'https://bitdash-a.akamaihd.net/content/MI201109210084_1/m3u8s/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8',
+            type: 'application/x-mpegURL'
+
+        });
+
+        // if user is not logged in, they shouldn't be able to watch more that 30 seconds.
+
+        // the modal component is required for full screen modal
+
+        var _frag =  document.createDocumentFragment();
+
+        var messegeElm = document.createElement('div');
+        var messegeTitle = document.createElement('h3');
+        var messegeBody = document.createElement('p');
+        var link = document.createElement('a');
+
+        link.innerHTML = "{% trans %}OK{% endtrans %}"
+        link.className += "btn btn-primary btn-lg" ;
+        link.setAttribute("href","{{ path('bongo_login',{ 'type': 'login' }) }}");
+
+        messegeTitle.innerHTML ="{% trans %}Hi there!{% endtrans %}";
+        messegeBody.innerHTML ="{% trans %}key_login_prompt_body_for_liveTV{% endtrans %}";
+
+        messegeElm.className += 'modal-content';
+
+        messegeElm.appendChild(messegeTitle);
+        messegeElm.appendChild(messegeBody);
+        messegeElm.appendChild(link)
+
+        _frag.appendChild(messegeElm);
+
+        var modalElement = document.createElement('div');
+        modalElement.className += 'loginPrompt modal-md';
+
+        modalElement.appendChild(_frag);
+
+        var ModalDialog = videojs.getComponent('ModalDialog');
+        var loginModal = new ModalDialog(player, {
+            content: modalElement,
+            // We don't want this modal to go away when it closes.
+            temporary: false,
+            uncloseable : true
+        });
+
+        player.addChild(loginModal);
+
+        isLoggedIn = true;
+
+        player.on('play', function () {
+            if (!isLoggedIn){
+                setTimeout(function () {
+                    player.pause();
+                    if (player.isFullscreen()) {
+                        loginModal.open();
+                        player.addClass('vjs-modal-open');
+                    } else {
+                        $('#loginPrompt').modal({
+                            backdrop: 'static',
+                            keyboard: false,
+                            show : true
+                        });
+                        player.addClass('login-prompt-open');
+                        if (player.hasClass('vjs-modal-open')){
+                            console.log('2nd modal');
+                            loginModal.close();
+                        }
+                    }
+                },30000)
+            }
+        })
+
+    });
+</script>
+<body>
+
+<div class="embed-responsive embed-responsive-16by9 videos" style="width: 400px">
+    <video data-piwik-title="VIDEO: Title" id="content_video" class="video-js vjs-default-skin vjs-16-9 vjs-big-play-centered vjs-show-big-play-button-on-pause"
+           controls autoplay="true" width="300px">
+    </video>
+</div>
+
+</body>
+</html>

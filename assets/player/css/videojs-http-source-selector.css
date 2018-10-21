@@ -1,0 +1,7 @@
+/**
+ * videojs-http-source-selector
+ * @version 1.0.2
+ * @copyright 2018 [object Object]
+ * @license MIT
+ */
+.video-js.vjs-http-source-selector{display:block}.video-js.vjs-http-source-selector .vjs-menu-button-popup .vjs-menu{width:200%;left:-100%}.video-js.vjs-http-source-selector li.selected-quality .vjs-menu-item-text::before{content:"\f00d";font-family:"VideoJS";font-size:.8em;line-height:inherit;margin-left:-15px;margin-right:5px}
